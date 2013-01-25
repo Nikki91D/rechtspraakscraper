@@ -144,17 +144,18 @@ class RechtSpraakNlSpider(BaseSpider):
 
                 # There are some variable fields for functions; find those here
                 for function_field in hxs.select('.//dt'):
-                    value = function_field.select('following-sibling::dd[1]/text()')\
-                        .extract()[0].strip()
+                    if function_field.select('text()'):
+                        value = function_field.select('following-sibling::dd[1]/text()')\
+                            .extract()[0].strip()
 
-                    key = function_field.select('text()').extract()[0].strip()
+                        key = function_field.select('text()').extract()[0].strip()
 
-                    if key.startswith('Datum'):
-                        # Parse dates to ISO dates
-                        value = datetime.strptime(value, '%d-%m-%Y')\
-                            .strftime('%Y-%m-%d')
+                        if key.startswith('Datum'):
+                            # Parse dates to ISO dates
+                            value = datetime.strptime(value, '%d-%m-%Y')\
+                                .strftime('%Y-%m-%d')
 
-                    f[settings.get('FIELDS')[key]] = value
+                        f[settings.get('FIELDS')[key]] = value
 
                 # Init and append Function
                 all_functions.append(Function(f))
