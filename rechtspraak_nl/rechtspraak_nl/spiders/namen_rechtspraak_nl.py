@@ -130,7 +130,7 @@ class RechtSpraakNlSpider(BaseSpider):
                     'h2[text()="%s"]' % (function_type),
                     'p[@class="textoptimalwidth"]'
                 ))
-            print functions
+
             if not functions:
                 # No functions of function_type found, so start next loop
                 continue
@@ -155,7 +155,7 @@ class RechtSpraakNlSpider(BaseSpider):
                             .strftime('%Y-%m-%d')
 
                     f[settings.get('FIELDS')[key]] = value
-                print f
+
                 # Init and append Function
                 all_functions.append(Function(f))
 
