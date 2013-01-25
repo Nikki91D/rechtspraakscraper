@@ -115,90 +115,49 @@ class RechtSpraakNlSpider(BaseSpider):
                    'sibling::%(start_node)s]'\
                     % {'start_node': node1, 'end_node': node2}
 
-        print response.meta['name']
+        # Hold all functions of a single person
+        all_functions = []
 
-        current_functions = hxs.select(dls_between(
-                        'h2[text()="Beroepsgegevens"]',
-                        'h2[text()="Nevenbetrekkingen"]'
-                    ))
+        for function_type in settings.get('FUNCTION_SEQUENCE'):
+            if settings.get('FUNCTION_TYPES')[function_type] != 'previous':
+                functions = hxs.select(dls_between(
+                    'h2[text()="%s"]' % (function_type),
+                    'h2'
+                ))
+            else:
+                # Last block
+                functions = hxs.select(dls_between(
+                    'h2[text()="%s"]' % (function_type),
+                    'p[@class="textoptimalwidth"]'
+                ))
+            print functions
+            if not functions:
+                # No functions of function_type found, so start next loop
+                continue
 
-        additional_functions = hxs.select(dls_between(
-                        'h2[text()="Nevenbetrekkingen"]',
-                        'h2[text()="Voorgaande betrekkingen"]'
-                    ))
-
-        previous_functions = hxs.select(dls_between(
-                        'h2[text()="Voorgaande betrekkingen"]',
-                        'p[@class="textoptimalwidth"]'
-                    ))
-
-        functions = []
-
-        for current_function in current_functions:
-            try:
-                data = current_function.select('.//dd/text()').extract()
-                date = datetime.strptime(data[2].strip(), '%d-%m-%Y')\
-                    .strftime('%Y-%m-%d')
-                functions.append(
-                    Function(
-                        name=response.meta['name'],
-                        gender=response.meta['gender'],
-                        function=data[0].strip(),
-                        institution=data[1].strip(),
-                        start_date=date,
-                        function_type='current'
-                    )
-                )
-            except:
-                # Something weird happened. TODO: decide what happens
-                pass
-
-        for additional_function in additional_functions:
-            try:
-                data = additional_function.select('.//dd/text()').extract()
-                date = datetime.strptime(data[3].strip(), '%d-%m-%Y')\
-                    .strftime('%Y-%m-%d')
+            for function in functions:
                 f = {
                     'name': response.meta['name'],
                     'gender': response.meta['gender'],
-                    'function': data[0].strip(),
-                    'institution': data[1].strip(),
-                    'place': data[2].strip(),
-                    'start_date': date,
-                    'function_type': 'additional'
+                    'function_type': settings.get('FUNCTION_TYPES')[function_type]
                 }
 
-                if len(data) == 5:
-                    f['institution_category'] = data[4]
-                else:
-                    f['end_date'] = datetime.strptime(data[4].strip(),\
-                        '%d-%m-%Y').strftime('%Y-%m-%d')
-                    f['institution_category'] = data[5]
+                # There are some variable fields for functions; find those here
+                for function_field in hxs.select('.//dt'):
+                    value = function_field.select('following-sibling::dd[1]/text()')\
+                        .extract()[0].strip()
 
-                functions.append(Function(f))
-            except:
-                # Something weird happened. TODO: decide what happens
-                pass
+                    key = function_field.select('text()').extract()[0].strip()
 
-        for previous_function in previous_functions:
-            try:
-                data = previous_function.select('.//dd/text()').extract()
-                sdate = datetime.strptime(data[-2].strip(), '%d-%m-%Y')\
-                    .strftime('%Y-%m-%d')
-                edate = datetime.strptime(data[-1].strip(), '%d-%m-%Y')\
-                    .strftime('%Y-%m-%d')
-                f = {
-                    'name': response.meta['name'],
-                    'gender': response.meta['gender'],
-                    'function_type': 'previous',
-                    'function': data[0].strip(),
-                    'institution': data[1].strip(),
-                    'start_date': sdate,
-                    'end_date': edate
-                }
-                functions.append(Function(f))
-            except:
-                # Something weird happened. TODO: decide what happens
-                pass
+                    if key.startswith('Datum'):
+                        # Parse dates to ISO dates
+                        value = datetime.strptime(value, '%d-%m-%Y')\
+                            .strftime('%Y-%m-%d')
 
-        return functions
+                    f[settings.get('FIELDS')[key]] = value
+                print f
+                # Init and append Function
+                all_functions.append(Function(f))
+
+        # Return functions to pipeline
+        return all_functions
