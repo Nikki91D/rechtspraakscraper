@@ -156,9 +156,5 @@ class RechtSpraakNlSpider(BaseSpider):
                                 .strftime('%Y-%m-%d')
 
                         f[settings.get('FIELDS')[key]] = value
-
-                # Init and append Function
-                all_functions.append(Function(f))
-
-        # Return functions to pipeline
-        return all_functions
+                # Yield Function to pipeline
+                yield Function(f)
