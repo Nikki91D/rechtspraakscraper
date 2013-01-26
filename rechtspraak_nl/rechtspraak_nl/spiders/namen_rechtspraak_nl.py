@@ -115,9 +115,6 @@ class RechtSpraakNlSpider(BaseSpider):
                    'sibling::%(start_node)s]'\
                     % {'start_node': node1, 'end_node': node2}
 
-        # Hold all functions of a single person
-        all_functions = []
-
         for function_type in settings.get('FUNCTION_SEQUENCE'):
             if settings.get('FUNCTION_TYPES')[function_type] != 'previous':
                 functions = hxs.select(dls_between(
@@ -137,13 +134,14 @@ class RechtSpraakNlSpider(BaseSpider):
 
             for function in functions:
                 f = {
-                    'name': response.meta['name'],
-                    'gender': response.meta['gender'],
-                    'function_type': settings.get('FUNCTION_TYPES')[function_type]
+                    'name': response.meta['name'].encode('utf8'),
+                    'gender': response.meta['gender'].encode('utf8'),
+                    'function_type': settings.get('FUNCTION_TYPES')[function_type]\
+                        .encode('utf8')
                 }
 
                 # There are some variable fields for functions; find those here
-                for function_field in hxs.select('.//dt'):
+                for function_field in function.select('.//dt'):
                     if function_field.select('text()'):
                         value = function_field.select('following-sibling::dd[1]/text()')\
                             .extract()[0].strip()
@@ -155,6 +153,7 @@ class RechtSpraakNlSpider(BaseSpider):
                             value = datetime.strptime(value, '%d-%m-%Y')\
                                 .strftime('%Y-%m-%d')
 
-                        f[settings.get('FIELDS')[key]] = value
+                        f[settings.get('FIELDS')[key].encode('utf8')] =\
+                            value.encode('utf8')
                 # Yield Function to pipeline
                 yield Function(f)
