@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+import csv
+
 from scrapy import signals
-from scrapy.contrib.exporter import CsvItemExporter
 
 
 class RechtspraakNlPipeline(object):
@@ -16,14 +18,16 @@ class RechtspraakNlPipeline(object):
     def spider_opened(self, spider):
         f = open('%s.csv' % spider.name.replace('.', '-'), 'wb')
         self.files[spider] = f
-        self.exporter = CsvItemExporter(f, delimiter=';')
-        self.exporter.start_exporting()
+        self.csvwriter = csv.DictWriter(f, ['name', 'gender', 'function',
+            'function_type', 'institution', 'start_date', 'end_date', 'place',
+            'institution_category',
+        ], extrasaction='ignore', delimiter=';')
+        self.csvwriter.writeheader()
 
     def spider_closed(self, spider):
-        self.exporter.finish_exporting()
         f = self.files.pop(spider)
         f.close()
 
     def process_item(self, item, spider):
-        self.exporter.export_item(item)
+        self.csvwriter.writerow(item)
         return item
